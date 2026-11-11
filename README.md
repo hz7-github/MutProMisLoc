@@ -141,3 +141,5 @@ python scripts/06_enrich_records.py --help
 
 Use a fresh output directory for each result set, such as `run2`. Downloads, conversion and database queries retain status or caches.
 When inputs or rules change, use a separate directory. See each entry point's `--help` for all available options.
+
+Annotations produced by this project are made available under the Creative Commons Attribution 4.0 International License (CC BY 4.0). Project-owned code is licensed under the MIT License. Third-party content remains subject to its original license terms.
