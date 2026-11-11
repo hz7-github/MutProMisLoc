@@ -21,7 +21,7 @@ import requests
 ROOT=Path(__file__).resolve().parents[2]
 spec=importlib.util.spec_from_file_location('step20',ROOT/'scripts/_internal/legacy_enrichment.py')
 E=importlib.util.module_from_spec(spec);spec.loader.exec_module(E)
-GREEK={'α':'alpha','β':'beta','γ':'gamma','δ':'delta','ε':'epsilon','θ':'theta','κ':'kappa','λ':'lambda','μ':'mu','µ':'mu','σ':'sigma','τ':'tau','ζ':'zeta'}
+GREEK={'伪':'alpha','尾':'beta','纬':'gamma','未':'delta','蔚':'epsilon','胃':'theta','魏':'kappa','位':'lambda','渭':'mu','碌':'mu','蟽':'sigma','蟿':'tau','味':'zeta'}
 
 
 def norm(value):
@@ -70,7 +70,8 @@ def protein_names(entry):
 
 
 class References:
-    def __init__(self, hgnc, old_cache, new_cache, online, max_requests=None):
+    def __init__(self, hgnc, old_cache, new_cache, online, max_requests=None, max_age_days=30, include_unreviewed=False):
+        self.max_age_days=max_age_days; self.include_unreviewed=include_unreviewed
         self.hgnc={d['hgnc_id']:d for d in E.read_json(hgnc)['response']['docs'] if d.get('status')=='Approved'}
         self.primary=defaultdict(set);self.alias=defaultdict(set);self.entries={};self.entry_sources={}
         for hid,doc in self.hgnc.items():
@@ -79,16 +80,27 @@ class References:
                 values=doc.get(field) or [];values=values if isinstance(values,list) else [values]
                 for value in values:self.alias[norm(value)].add(hid)
         self.old_cache=old_cache;self.new_cache=new_cache;self.online=online;self.max_requests=max_requests
-        self.client=E.UniProtClient(new_cache/'uniprot_json',online=online,interval=0.5,max_requests=max_requests)
+        self.client=E.UniProtClient(new_cache/'uniprot_json',online=online,interval=0.5,max_requests=max_requests,max_age_days=max_age_days,include_unreviewed=include_unreviewed)
         self.session=requests.Session();self.text_requests=0;self.last_text=0
         for directory in [old_cache,new_cache/'uniprot_json']:
             for path in sorted(directory.glob('*.json')):
                 envelope=E.read_json(path)
-                if envelope.get('status')!='OK':continue
+                if envelope.get('status')!='OK' or envelope.get('schema')!='uniprot-request-cache-v1' or not self.fresh(envelope):continue
+                request=envelope.get('request',{})
+                if not request.get('url','').startswith('https://rest.uniprot.org/uniprotkb/'):continue
+                key=hashlib.sha256(json.dumps(request,sort_keys=True).encode()).hexdigest()
+                if path.stem!=key:continue
                 payload=envelope.get('payload') or {}
                 for entry in payload.get('results',[payload]):
                     if entry.get('primaryAccession') and entry.get('organism',{}).get('taxonId')==9606:
                         self.add_entry(entry,envelope.get('response_url'),envelope.get('release'),envelope.get('fetched_at'))
+
+    def fresh(self,envelope):
+        try:
+            age=(datetime.now(timezone.utc)-datetime.fromisoformat(envelope["fetched_at"])).total_seconds()/86400
+            return 0 <= age <= self.max_age_days
+        except (KeyError,TypeError,ValueError):
+            return False
 
     def entry_hgnc(self,entry):
         ids={x['id'] for x in entry.get('uniProtKBCrossReferences',[]) if x.get('database')=='HGNC' and x.get('id') in self.hgnc}
@@ -105,6 +117,8 @@ class References:
     def get_entry(self,accession):
         accession=accession.split('-')[0]
         if accession in self.entries:return self.entries[accession],None
+        for entry in list(self.entries.values()):
+            if accession in entry.get('secondaryAccessions',[]):return entry,None
         if self.max_requests is not None:self.client.max_requests=max(0,self.max_requests-self.text_requests)
         response=self.client.request(accession+'.json')
         if response['status']!='OK':return None,response['status']
@@ -155,15 +169,20 @@ class References:
         if len(candidates)!=1:return None,'NAME_STILL_AMBIGUOUS',evidence
         hid=next(iter(candidates));doc=self.hgnc[hid]
         declared={E.text(r.get('uniprot_id')).split('-')[0] for r in originals if E.ACCESSION.fullmatch(E.text(r.get('uniprot_id')))}
+        existing=E.text(work['row'].get('Accession_new'))
+        if not E.missing(existing):declared.add(existing.split('-')[0])
         accessions=set(doc.get('uniprot_ids') or [])
         if declared:
-            overlap=accessions&declared
-            if not overlap:return None,'SOURCE_ACCESSION_CONFLICT',evidence
-            accessions=overlap
-        existing=E.text(work['row'].get('Accession_new'))
-        if existing:
-            if existing.split('-')[0] not in accessions:return None,'EXISTING_ACCESSION_CONFLICT',evidence
-            accessions={existing.split('-')[0]}
+            resolved=set()
+            for accession in sorted(declared):
+                entry,error=self.get_entry(accession)
+                if error:return None,'SOURCE_ACCESSION_UNRESOLVED',evidence
+                resolved.add(entry['primaryAccession'])
+                evidence.append({'declared_accession':accession,'primary_accession':entry['primaryAccession'],'basis':'UniProt accession mapping'})
+            if len(resolved)!=1:return None,'SOURCE_ACCESSIONS_CONFLICT',evidence
+            canonical=next(iter(resolved))
+            if canonical not in accessions:return None,'SOURCE_ACCESSION_CONFLICT',evidence
+            accessions={canonical}
         entries=[]
         for accession in sorted(accessions):
             entry,error=self.get_entry(accession)
@@ -171,7 +190,8 @@ class References:
             if hid not in self.entry_hgnc(entry):return None,'HGNC_UNIPROT_CONFLICT',evidence
             entries.append(entry)
         reviewed=[e for e in entries if e.get('entryType','').startswith('UniProtKB reviewed')]
-        entries=reviewed or entries
+        entries=(reviewed or entries) if self.include_unreviewed else reviewed
+        if not entries:return None,'UNREVIEWED_NOT_ALLOWED',evidence
         unique={e['primaryAccession']:e for e in entries}
         if len(unique)>1:
             # Superscript state labels do not change protein product identity.
@@ -197,7 +217,10 @@ class References:
         identity={'url':url,'params':params or {}}
         key=hashlib.sha256(json.dumps(identity,sort_keys=True).encode()).hexdigest()
         path=self.new_cache/'text'/f'{key}.json'
-        if path.exists():return E.read_json(path)
+        if path.exists():
+            cached=E.read_json(path)
+            if cached.get('request')==identity and cached.get('status')=='OK' and self.fresh(cached):return cached
+            if not self.online:return {'status':'STALE_CACHE','request':identity}
         if not self.online:return {'status':'OFFLINE_CACHE_MISS','request':identity}
         for attempt in range(3):
             if self.max_requests is not None and self.client.calls+self.text_requests>=self.max_requests:
@@ -342,7 +365,7 @@ def run(args):
     if E.digest(args.input_dir/'enriched_records.json')!=workset['input_sha256']:raise ValueError('Workset is stale')
     if args.output_dir.resolve()==args.input_dir.resolve():raise ValueError('Output cannot replace the input directory')
     if args.output_dir.exists() and any(args.output_dir.iterdir()) and not args.force:raise ValueError('Use a new empty output directory or --force for this output run')
-    references=References(args.hgnc,args.old_cache,args.cache_dir,args.online,getattr(args,'max_requests',None))
+    references=References(args.hgnc,args.old_cache,args.cache_dir,args.online,getattr(args,'max_requests',None),getattr(args,'cache_max_age_days',30),getattr(args,'include_unreviewed',False))
     rows=copy.deepcopy(prior['records']);by_id={r['id']:r for r in rows}
     recovery=[];changes=[]
     try:

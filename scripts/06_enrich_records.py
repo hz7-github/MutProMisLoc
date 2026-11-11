@@ -187,6 +187,7 @@ def run(args):
         recovery.run(SimpleNamespace(input_dir=first, workset=workset_path,
             hgnc=args.hgnc, old_cache=args.uniprot_cache, cache_dir=args.reference_cache,
             output_dir=recovered, online=args.online, xlsx=False, force=False,
+            cache_max_age_days=args.cache_max_age_days, include_unreviewed=args.include_unreviewed,
             max_requests=None if args.max_requests is None else max(0, args.max_requests - client.calls)))
         updated = enrich.read_json(recovered / 'enriched_records.json')['records']
         changes += enrich.read_json(recovered / 'field_changes.json')
