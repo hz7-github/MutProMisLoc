@@ -1,0 +1,1 @@
+2026-11-10 Asia/Shanghai: User notified to check UniProt data license https://www.uniprot.org/help/license and API terms https://www.uniprot.org/help/api_queries.

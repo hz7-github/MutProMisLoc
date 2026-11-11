@@ -1,0 +1,44 @@
+# Local Python/runtime files
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mineru/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Local secrets and configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Generated and user-supplied data
+/data/**
+/demo/data/**
+!/demo/data/01_sample_papers/
+!/demo/data/01_sample_papers/papers_available.xlsx
+!/demo/data/01_sample_papers/papers_sample100.xlsx
+!/demo/data/01_sample_papers/papers_sample100.csv
+/outputs/
+/cache/
+/tmp/
+/tmp*/
+*.log
+*.tmp
+~$*
+
+# Editors and operating system
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Temporary local translation
+/README.zh.md
