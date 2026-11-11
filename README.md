@@ -109,23 +109,6 @@ Saved adjudication snapshots are not bundled; the default snapshot mode requires
 | 05 | `demo/data/05_records/run1/records.xlsx/.json/.csv` |
 | 06 | `demo/data/06_completed_records/run1/completed_records.xlsx/.json/.csv` |
 
-Final Excel files contain a single `Records` worksheet, one header row, exactly 26 columns and no cell fills.
-Step 05 exports reviewed records; accessions, review status and reference sequences are enriched at the final Step 06.
-Step 06 exports records with complete target fields and no detected conflicts; database localization is required only where applicable.
-Statistics and audits are separate JSON/CSV files. Complete sequences remain in JSON and `wild_sequences.fasta`.
-Use JSON between Steps 05 and 06. Counts depend on the actual download, extraction, review and enrichment results.
-
-## Validation and resume
-
-```bash
-python scripts/01_get_pubmed_metadata.py --self-test
-python scripts/05_build_records.py --help
-python scripts/06_enrich_records.py --help
-```
-
-Use a fresh output directory for each result set, such as `run2`. Downloads, conversion and database queries retain status or caches.
-When inputs or rules change, use a separate directory. See each entry point's `--help` for all available options.
-
 ## Run the main pipeline
 
 The main pipeline defaults to `expanded`; no preset argument is needed at each step. Step 01 writes `papers_expanded.xlsx/.csv`, and subsequent steps use the matching files and directories.
