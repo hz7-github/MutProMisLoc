@@ -65,7 +65,7 @@ PDFs, converted full text, model responses, database caches and results are gene
 
 Shared runtime modules live in `scripts/_internal/` and are loaded by the numbered entry points.
 Demo metadata consists of `papers_available.xlsx`, `papers_sample100.xlsx` and `papers_sample100.csv`
-in `demo/data/01_sample_papers/`. Third-party notices are in `.licenses/`.
+in `demo/data/01_sample_papers/`.
 
 ## API configuration and reference data
 
@@ -140,4 +140,4 @@ python scripts/06_enrich_records.py --help
 ```
 
 Use a fresh output directory for each result set, such as `run2`. Downloads, conversion and database queries retain status or caches.
-When inputs or rules change, use a separate directory. See each entry point's `--help` and [the command guide](scripts/README.md).
+When inputs or rules change, use a separate directory. See each entry point's `--help` for all available options.
