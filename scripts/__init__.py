@@ -1,1 +1,1 @@
-"""Command-line entry points and internal runtime modules."""
+"""MutProMisLoc command-line entry points and internal runtime modules."""
