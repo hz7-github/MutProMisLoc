@@ -81,22 +81,6 @@ curl --fail --location https://storage.googleapis.com/public-download-files/hgnc
 Alternatively, supply an existing reference with `--hgnc`. Use `--online` for new database queries;
 subsequent runs can reuse locally stored caches.
 
-## Run the main pipeline
-
-The main pipeline defaults to `expanded`; no preset argument is needed at each step. Step 01 writes `papers_expanded.xlsx/.csv`, and subsequent steps use the matching files and directories.
-
-```bash
-python scripts/01_get_pubmed_metadata.py
-python scripts/02_download_papers.py
-python scripts/03_mineru_pdf_to_md.py --mineru-command "$CONDA_PREFIX/bin/mineru-kit" --model-source modelscope
-python scripts/04_extract_deepseek.py
-python scripts/05_build_records.py --online --output-dir data/05_records/run1
-python scripts/06_enrich_records.py --input data/05_records/run1/records.json --output-dir data/06_completed_records/run1 --online
-```
-
-Step 01 defaults to a publication cutoff of 2025-08-01; use `--end-date` to change it.
-Manually obtained PDFs can be named `<PMID>.pdf` in the matching download directory before Step 03.
-
 ## Run the Demo
 
 Demo entry points explicitly use the sample metadata and step directories under `demo/data/`; the main preset default does not change the Demo input scope.
@@ -141,5 +125,21 @@ python scripts/06_enrich_records.py --help
 
 Use a fresh output directory for each result set, such as `run2`. Downloads, conversion and database queries retain status or caches.
 When inputs or rules change, use a separate directory. See each entry point's `--help` for all available options.
+
+## Run the main pipeline
+
+The main pipeline defaults to `expanded`; no preset argument is needed at each step. Step 01 writes `papers_expanded.xlsx/.csv`, and subsequent steps use the matching files and directories.
+
+```bash
+python scripts/01_get_pubmed_metadata.py
+python scripts/02_download_papers.py
+python scripts/03_mineru_pdf_to_md.py --mineru-command "$CONDA_PREFIX/bin/mineru-kit" --model-source modelscope
+python scripts/04_extract_deepseek.py
+python scripts/05_build_records.py --online --output-dir data/05_records/run1
+python scripts/06_enrich_records.py --input data/05_records/run1/records.json --output-dir data/06_completed_records/run1 --online
+```
+
+Step 01 defaults to a publication cutoff of 2025-08-01; use `--end-date` to change it.
+Manually obtained PDFs can be named `<PMID>.pdf` in the matching download directory before Step 03.
 
 Annotations produced by this project are made available under the Creative Commons Attribution 4.0 International License (CC BY 4.0). Project-owned code is licensed under the MIT License. Third-party content remains subject to its original license terms.
