@@ -1955,3 +1955,222 @@ def summarize_main():
     return 0
 
 
+
+
+# Shared display rules used by the existing 05 and 06 entry points.
+def _build_display_rules():
+    """Shared offline display rules; source descriptions remain in audit, not display cells."""
+    import re
+    import copy
+    AA={'A': 'Ala', 'R': 'Arg', 'N': 'Asn', 'D': 'Asp', 'C': 'Cys', 'E': 'Glu', 'Q': 'Gln', 'G': 'Gly', 'H': 'His', 'I': 'Ile', 'L': 'Leu', 'K': 'Lys', 'M': 'Met', 'F': 'Phe', 'P': 'Pro', 'S': 'Ser', 'T': 'Thr', 'W': 'Trp', 'Y': 'Tyr', 'V': 'Val', 'U': 'Sec', 'O': 'Pyl'}
+    REVERSE={'Ala': 'A', 'Arg': 'R', 'Asn': 'N', 'Asp': 'D', 'Cys': 'C', 'Glu': 'E', 'Gln': 'Q', 'Gly': 'G', 'His': 'H', 'Ile': 'I', 'Leu': 'L', 'Lys': 'K', 'Met': 'M', 'Phe': 'F', 'Pro': 'P', 'Ser': 'S', 'Thr': 'T', 'Trp': 'W', 'Tyr': 'Y', 'Val': 'V', 'Sec': 'U', 'Pyl': 'O'}
+    TRI='(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)'
+    RES='(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)|[ARNDCEQGHILKMFPSTWYVUO])'
+    R='(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)|[ARNDCEQGHILKMFPSTWYVUO])'
+    P='(?:(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)|[ARNDCEQGHILKMFPSTWYVUO]))[1-9][0-9]*'
+    INSERT='(?:(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl))+|[ARNDCEQGHILKMFPSTWYVUO]+)'
+    BODY='(?:(?:(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)|[ARNDCEQGHILKMFPSTWYVUO]))[1-9][0-9]*(?:_(?:(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)|[ARNDCEQGHILKMFPSTWYVUO]))[1-9][0-9]*)?(?:delins|ins)(?:(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl))+|[ARNDCEQGHILKMFPSTWYVUO]+)|(?:(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)|[ARNDCEQGHILKMFPSTWYVUO]))[1-9][0-9]*(?:_(?:(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)|[ARNDCEQGHILKMFPSTWYVUO]))[1-9][0-9]*)?(?:del|dup)|(?:(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)|[ARNDCEQGHILKMFPSTWYVUO]))[1-9][0-9]*(?:(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)|[ARNDCEQGHILKMFPSTWYVUO]))?fs(?:(?:Ter|X|\\*)[1-9][0-9]*|(?:Ter|X|\\*)\\?)?|(?:(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)|[ARNDCEQGHILKMFPSTWYVUO]))[1-9][0-9]*(?:(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)|[ARNDCEQGHILKMFPSTWYVUO])|Ter|X|\\*|=))'
+    RULES=[('Nuclear membrane', '\\bnuclear (?:membrane|envelope)\\b'), ('Nuclear bodies', '\\bnuclear (?:bodies|body|speckles|speckle)\\b'), ('Nucleoplasm', '\\bnucleoplasm(?:ic)?\\b'), ('Nucleoli', '\\bnucleol(?:us|i|ar)\\b'), ('Cytoplasmic bodies', '\\bcytoplasmic bod(?:y|ies)\\b'), ('Trans-Golgi network', '\\btrans[- ]golgi (?:network|compartment)\\b|\\bTGN\\b'), ('Endoplasmic reticulum', '\\bendoplasmic reticulum\\b|\\bER\\b'), ('Golgi apparatus', '\\bgolgi(?: apparatus| complex)?\\b'), ('Plasma membrane', '\\bplasma membrane\\b|\\bcell surface\\b|\\bsurface membrane\\b|\\bcell membrane\\b'), ('Cytosol', '\\bcytosol(?:ic)?\\b'), ('Cytoplasm', '\\bcytoplasm(?:ic)?\\b'), ('Nucleus', '\\bnucleus\\b|\\bnuclei\\b|\\bnuclear\\b'), ('Mitochondria', '\\bmitochondri(?:a|on|al)\\b'), ('Lysosomes', '\\blysosom(?:e|es|al)\\b'), ('Endosomes', '\\bendosom(?:e|es|al)\\b'), ('Peroxisomes', '\\bperoxisom(?:e|es|al)\\b'), ('Centrosome', '\\bcentrosom(?:e|es|al)\\b'), ('Microtubules', '\\bmicrotubul(?:e|es|ar)\\b'), ('Actin filaments', '\\bactin filaments?\\b|\\bF[- ]actin\\b'), ('Cell Junctions', '\\bcell(?:ular)? junctions?\\b|\\btight junctions?\\b|\\badherens junctions?\\b'), ('Aggresome', '\\baggresomes?\\b'), ('Endomembrane system', '\\bendomembrane (?:system|compartments?)\\b'), ('Vesicles', '\\bvesicl(?:e|es)\\b|\\bvesicular\\b'), ('Foci', '\\bfoci\\b|\\bfocus\\b'), ('Other-Stress granules', '\\bstress granules?\\b'), ('Other-Cytoplasmic granules', '\\bcytoplasmic granules?\\b'), ('Other-Punctate structures', '\\bpunctate (?:structures|staining|pattern|distribution)\\b|\\bpuncta\\b'), ('Other-Intracellular', '\\bintracellular\\b'), ('Other-Cell periphery', '\\bcell periphery\\b|\\bcellular periphery\\b'), ('Other-Cell processes', '\\bneurites?\\b|\\baxons?\\b|\\bdendrites?\\b'), ('Other-Cilia', '\\bcilia\\b|\\bcilium\\b|\\bciliary\\b'), ('Other-Outer segment', '\\bouter segments?\\b'), ('Other-Inner segment', '\\binner segments?\\b'), ('Other-Extracellular', '\\bextracellular\\b|\\bsecreted\\b|\\bculture medium\\b'), ('Other-Apical membrane', '\\bapical (?:membrane|surface)\\b'), ('Other-Basolateral membrane', '\\bbasolateral (?:membrane|surface)\\b'), ('Other-Apical region', '\\bapical\\b'), ('Other-Basolateral region', '\\bbasolateral\\b'), ('Other-Inclusion bodies', '\\binclusion bod(?:y|ies)\\b'), ('Other-Protein aggregates', '\\baggregates?\\b|\\baggregation\\b'), ('Cytoskeleton', '\\bcytoskelet(?:on|al)\\b'), ('Actin', '\\bActin\\b'), ('Cell membrane', '\\bCell\\ membrane\\b'), ('Cell surface', '\\bCell\\ surface\\b'), ('Cellular periphery', '\\bCellular\\ periphery\\b'), ('Chromosomes', '\\bChromosomes\\b'), ('Cis-Golgi', '\\bCis\\-Golgi\\b'), ('Cytoplasmic membrane', '\\bCytoplasmic\\ membrane\\b'), ('Endolysosomes', '\\bEndolysosomes\\b'), ('Endoplasmic reticulum membrane', '\\bEndoplasmic\\ reticulum\\ membrane\\b'), ('Endosome-lysosomal compartments', '\\bEndosome\\-lysosomal\\ compartments\\b'), ('Focal adhesion sites', '\\bFocal\\ adhesion\\ sites\\b'), ('Glycosome', '\\bGlycosome\\b'), ('Golgi', '\\bGolgi\\b'), ('Intermediate filaments', '\\bIntermediate\\ filaments\\b'), ('Kinetochore', '\\bKinetochore\\b'), ('Lipid droplets', '\\bLipid\\ droplets\\b'), ('Lysosome', '\\bLysosome\\b'), ('M-band', '\\bM\\-band\\b'), ('MDCKII', '\\bMDCKII\\b'), ('Midbody ring', '\\bMidbody\\ ring\\b'), ('Mitochondrion', '\\bMitochondrion\\b'), ('Mitochondrion membrane', '\\bMitochondrion\\ membrane\\b'), ('Mitotic spindle', '\\bMitotic\\ spindle\\b'), ('Nuclear envelope', '\\bNuclear\\ envelope\\b'), ('Nuclear periphery', '\\bNuclear\\ periphery\\b'), ('Nuclear speckles', '\\bNuclear\\ speckles\\b'), ('Nucleoli fibrillar center', '\\bNucleoli\\ fibrillar\\ center\\b'), ('Nucleolus', '\\bNucleolus\\b'), ('Other-Aberrant filaments', '\\bAberrant\\ filaments\\b'), ('Other-Aggregates', '\\bAggregates\\b'), ('Other-Apical plasma membrane', '\\bApical\\ plasma\\ membrane\\b'), ('Other-Apical surface', '\\bApical\\ surface\\b'), ('Other-Around central nuclei', '\\bAround\\ central\\ nuclei\\b'), ('Other-Axon initial segment', '\\bAxon\\ initial\\ segment\\b'), ('Other-Axonal', '\\bAxonal\\b'), ('Other-Axons', '\\bAxons\\b'), ('Other-Basal body area', '\\bBasal\\ body\\ area\\b'), ('Other-Base of the cilium', '\\bBase\\ of\\ the\\ cilium\\b'), ('Other-Basolateral domain', '\\bBasolateral\\ domain\\b'), ('Other-Basolateral surface', '\\bBasolateral\\ surface\\b'), ('Other-Cajal bodies', '\\bCajal\\ bodies\\b'), ('Other-Cell body', '\\bCell\\ body\\b'), ('Other-Cell-wide', '\\bCell\\-wide\\b'), ('Other-Ciliary base', '\\bCiliary\\ base\\b'), ('Other-Ciliary membranes', '\\bCiliary\\ membranes\\b'), ('Other-Connecting cilium', '\\bConnecting\\ cilium\\b'), ('Other-Cortex', '\\bCortex\\b'), ('Other-Cytoplasmic aggregates', '\\bCytoplasmic\\ aggregates\\b'), ('Other-Cytoplasmic inclusions', '\\bCytoplasmic\\ inclusions\\b'), ('Other-Dendrites', '\\bDendrites\\b'), ('Other-Dendritic arbors', '\\bDendritic\\ arbors\\b'), ('Other-Dendritic shafts', '\\bDendritic\\ shafts\\b'), ('Other-Dendritic spines', '\\bDendritic\\ spines\\b'), ('Other-Dense fibrillar component', '\\bDense\\ fibrillar\\ component\\b'), ('Other-Diffuse punctae', '\\bDiffuse\\ punctae\\b'), ('Other-Diffused outer segment', '\\bDiffused\\ outer\\ segment\\b'), ('Other-Disc rims', '\\bDisc\\ rims\\b'), ('Other-Eccentric', '\\bEccentric\\b'), ('Other-Endolysosomes', '\\bEndolysosomes\\b'), ('Other-Endoplasmic reticulum', '\\bEndoplasmic\\ reticulum\\b'), ('Other-Endoplasmic reticulum lumen', '\\bEndoplasmic\\ reticulum\\ lumen\\b'), ('Other-Endoplasmic reticulum membrane', '\\bEndoplasmic\\ reticulum\\ membrane\\b'), ('Other-Euchromatin', '\\bEuchromatin\\b'), ('Other-Food vacuole', '\\bFood\\ vacuole\\b'), ('Other-Golgi trafficking defects', '\\bGolgi\\ trafficking\\ defects\\b'), ('Other-Heterochromatin', '\\bHeterochromatin\\b'), ('Other-Inner dynein arms', '\\bInner\\ dynein\\ arms\\b'), ('Other-Inner nuclear membrane', '\\bInner\\ nuclear\\ membrane\\b'), ('Other-Inner segment plasma membrane', '\\bInner\\ segment\\ plasma\\ membrane\\b'), ('Other-Inner segments', '\\bInner\\ segments\\b'), ('Other-Inside capsid lattice', '\\bInside\\ capsid\\ lattice\\b'), ('Other-Intermembrane space', '\\bIntermembrane\\ space\\b'), ('Other-Intracellular membranes', '\\bIntracellular\\ membranes\\b'), ('Other-Late endosomes', '\\bLate\\ endosomes\\b'), ('Other-Lewy body-like inclusions', '\\bLewy\\ body\\-like\\ inclusions\\b'), ('Other-Luminal surfaces', '\\bLuminal\\ surfaces\\b'), ('Other-Mature Secretory Granules', '\\bMature\\ Secretory\\ Granules\\b'), ('Other-Microsomal membrane', '\\bMicrosomal\\ membrane\\b'), ('Other-Mid-cell Z-ring', '\\bMid\\-cell\\ Z\\-ring\\b'), ('Other-Mislocalized Z-ring', '\\bMislocalized\\ Z\\-ring\\b'), ('Other-Mitochondrial matrix', '\\bMitochondrial\\ matrix\\b'), ('Other-Mostly nuclear', '\\bMostly\\ nuclear\\b'), ('Other-Neurites', '\\bNeurites\\b'), ('Other-Nuclear aggregates', '\\bNuclear\\ aggregates\\b'), ('Other-Nuclear poles', '\\bNuclear\\ poles\\b'), ('Other-Nuclear pore complex', '\\bNuclear\\ pore\\ complex\\b'), ('Other-Outer Plexiform Layer', '\\bOuter\\ Plexiform\\ Layer\\b'), ('Other-Outer membrane', '\\bOuter\\ membrane\\b'), ('Other-Outer nuclear layer', '\\bOuter\\ nuclear\\ layer\\b'), ('Other-Outer plexiform layer', '\\bOuter\\ plexiform\\ layer\\b'), ('Other-Outer segments', '\\bOuter\\ segments\\b'), ('Other-P-bodies', '\\bP\\-bodies\\b'), ('Other-Periciliary region', '\\bPericiliary\\ region\\b'), ('Other-Perinuclear area', '\\bPerinuclear\\ area\\b'), ('Other-Perinuclear region', '\\bPerinuclear\\ region\\b'), ('Other-Photoreceptor inner segment', '\\bPhotoreceptor\\ inner\\ segment\\b'), ('Other-Photoreceptor outer segment', '\\bPhotoreceptor\\ outer\\ segment\\b'), ('Other-Photoreceptor outer segment rims', '\\bPhotoreceptor\\ outer\\ segment\\ rims\\b'), ('Other-Photoreceptor outer segments', '\\bPhotoreceptor\\ outer\\ segments\\b'), ('Other-Poles', '\\bPoles\\b'), ('Other-Posterior', '\\bPosterior\\b'), ('Other-Presynaptic terminals', '\\bPresynaptic\\ terminals\\b'), ('Other-Proximal transition zone', '\\bProximal\\ transition\\ zone\\b'), ('Other-Punctate perinuclear aggregates', '\\bPunctate\\ perinuclear\\ aggregates\\b'), ('Other-Rhabdomeres', '\\bRhabdomeres\\b'), ('Other-Rod outer segment', '\\bRod\\ outer\\ segment\\b'), ('Other-Rod outer segment disks', '\\bRod\\ outer\\ segment\\ disks\\b'), ('Other-Secreted', '\\bSecreted\\b'), ('Other-Secretory granules', '\\bSecretory\\ granules\\b'), ('Other-Secretory pathway', '\\bSecretory\\ pathway\\b'), ('Other-Secretory vesicles', '\\bSecretory\\ vesicles\\b'), ('Other-Septum', '\\bSeptum\\b'), ('Other-Somato-dendritic compartment', '\\bSomato\\-dendritic\\ compartment\\b'), ('Other-Somatodendritic', '\\bSomatodendritic\\b'), ('Other-Somatodendritic compartment', '\\bSomatodendritic\\ compartment\\b'), ('Other-Synapses', '\\bSynapses\\b'), ('Other-Synaptic terminal', '\\bSynaptic\\ terminal\\b'), ('Other-Synaptic vesicles', '\\bSynaptic\\ vesicles\\b'), ('Other-Throughout cell', '\\bThroughout\\ cell\\b'), ('Other-Throughout the cilium', '\\bThroughout\\ the\\ cilium\\b'), ('Other-Tonoplast', '\\bTonoplast\\b'), ('Other-Transition zone', '\\bTransition\\ zone\\b'), ('Other-Triads', '\\bTriads\\b'), ('Other-Vacuolar membrane', '\\bVacuolar\\ membrane\\b'), ('Other-Vacuole', '\\bVacuole\\b'), ('Other-Whole cell', '\\bWhole\\ cell\\b'), ('Other-Z disk', '\\bZ\\ disk\\b'), ('Other-Z-discs', '\\bZ\\-discs\\b'), ('Other-Z-line', '\\bZ\\-line\\b'), ('Other-anterior endings', '\\banterior\\ endings\\b'), ('Other-apical', '\\bapical\\b'), ('Other-apical plasma membrane', '\\bapical\\ plasma\\ membrane\\b'), ('Other-autophagic puncta', '\\bautophagic\\ puncta\\b'), ('Other-axoneme', '\\baxoneme\\b'), ('Other-balanced nuclear-cytoplasmic', '\\bbalanced\\ nuclear\\-cytoplasmic\\b'), ('Other-basolateral', '\\bbasolateral\\b'), ('Other-cell body', '\\bcell\\ body\\b'), ('Other-cis-Golgi', '\\bcis\\-Golgi\\b'), ('Other-clustered anterior endings', '\\bclustered\\ anterior\\ endings\\b'), ('Other-connecting cilium', '\\bconnecting\\ cilium\\b'), ('Other-dense aggregates', '\\bdense\\ aggregates\\b'), ('Other-diffuse in rod compartments', '\\bdiffuse\\ in\\ rod\\ compartments\\b'), ('Other-distal dendritic arbors', '\\bdistal\\ dendritic\\ arbors\\b'), ('Other-dorsal DD processes', '\\bdorsal\\ DD\\ processes\\b'), ('Other-fiber center', '\\bfiber\\ center\\b'), ('Other-intercalated disc', '\\bintercalated\\ disc\\b'), ('Other-intercalated discs', '\\bintercalated\\ discs\\b'), ('Other-intracellular membranes', '\\bintracellular\\ membranes\\b'), ('Other-intralysosomal space', '\\bintralysosomal\\ space\\b'), ('Other-intranuclear aggregates', '\\bintranuclear\\ aggregates\\b'), ('Other-intranuclear foci', '\\bintranuclear\\ foci\\b'), ('Other-intranuclear inclusions', '\\bintranuclear\\ inclusions\\b'), ('Other-irregular puncta', '\\birregular\\ puncta\\b'), ('Other-late endocytic compartments', '\\blate\\ endocytic\\ compartments\\b'), ('Other-lateral localization', '\\blateral\\ localization\\b'), ('Other-microsomal membranes', '\\bmicrosomal\\ membranes\\b'), ('Other-neurites', '\\bneurites\\b'), ('Other-non-Endoplasmic reticulum compartment', '\\bnon\\-Endoplasmic\\ reticulum\\ compartment\\b'), ('Other-non-centromeric chromatin', '\\bnon\\-centromeric\\ chromatin\\b'), ('Other-non-myelin plasma membranes', '\\bnon\\-myelin\\ plasma\\ membranes\\b'), ('Other-nuclear aggregates', '\\bnuclear\\ aggregates\\b'), ('Other-nuclear lamina patches', '\\bnuclear\\ lamina\\ patches\\b'), ('Other-outer segments', '\\bouter\\ segments\\b'), ('Other-perinuclear', '\\bperinuclear\\b'), ('Other-perinuclear area', '\\bperinuclear\\ area\\b'), ('Other-perinuclear region', '\\bperinuclear\\ region\\b'), ('Other-proximal axoneme', '\\bproximal\\ axoneme\\b'), ('Other-punctate deposits', '\\bpunctate\\ deposits\\b'), ('Other-rhabdomere', '\\brhabdomere\\b'), ('Other-rod outer segment', '\\brod\\ outer\\ segment\\b'), ('Other-secretory pathway', '\\bsecretory\\ pathway\\b'), ('Other-septa', '\\bsepta\\b'), ('Other-septum', '\\bseptum\\b'), ('Other-stereocilia', '\\bstereocilia\\b'), ('Other-subsarcolemmal', '\\bsubsarcolemmal\\b'), ('Other-synaptic termini', '\\bsynaptic\\ termini\\b'), ('Other-uropod', '\\buropod\\b'), ('Other-ventral DD processes', '\\bventral\\ DD\\ processes\\b'), ('Other-ventral cord puncta', '\\bventral\\ cord\\ puncta\\b'), ('Other-vesicles', '\\bvesicles\\b'), ('Outer membrane', '\\bOuter\\ membrane\\b'), ('Peroxisome', '\\bPeroxisome\\b'), ('Secreted', '\\bSecreted\\b'), ('Tubulin', '\\bTubulin\\b'), ('Vacuole', '\\bVacuole\\b'), ('iPSC-derived neurons', '\\biPSC\\-derived\\ neurons\\b'), ('iPSCs', '\\biPSCs\\b'), ('mitochondrion', '\\bmitochondrion\\b')]
+    NAMES={'alanine': 'Ala', 'arginine': 'Arg', 'asparagine': 'Asn', 'aspartic acid': 'Asp', 'aspartate': 'Asp', 'cysteine': 'Cys', 'glutamine': 'Gln', 'glutamic acid': 'Glu', 'glutamate': 'Glu', 'glycine': 'Gly', 'histidine': 'His', 'isoleucine': 'Ile', 'leucine': 'Leu', 'lysine': 'Lys', 'methionine': 'Met', 'phenylalanine': 'Phe', 'proline': 'Pro', 'serine': 'Ser', 'threonine': 'Thr', 'tryptophan': 'Trp', 'tyrosine': 'Tyr', 'valine': 'Val'}
+    POS='((?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)|[ARNDCEQGHILKMFPSTWYVUO]))\\s*-?\\s*([1-9][0-9]*)'
+    ALT='((?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)|[ARNDCEQGHILKMFPSTWYVUO])|Ter|stop|termination)'
+    TOKEN=re.compile('(?<![A-Za-z0-9_.])(?:p\\.\\s*)?(?:\\()?(?:(?:(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)|[ARNDCEQGHILKMFPSTWYVUO]))[1-9][0-9]*(?:_(?:(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)|[ARNDCEQGHILKMFPSTWYVUO]))[1-9][0-9]*)?(?:delins|ins)(?:(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl))+|[ARNDCEQGHILKMFPSTWYVUO]+)|(?:(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)|[ARNDCEQGHILKMFPSTWYVUO]))[1-9][0-9]*(?:_(?:(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)|[ARNDCEQGHILKMFPSTWYVUO]))[1-9][0-9]*)?(?:del|dup)|(?:(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)|[ARNDCEQGHILKMFPSTWYVUO]))[1-9][0-9]*(?:(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)|[ARNDCEQGHILKMFPSTWYVUO]))?fs(?:(?:Ter|X|\\*)[1-9][0-9]*|(?:Ter|X|\\*)\\?)?|(?:(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)|[ARNDCEQGHILKMFPSTWYVUO]))[1-9][0-9]*(?:(?:(?:Ala|Arg|Asn|Asp|Cys|Glu|Gln|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Sec|Pyl)|[ARNDCEQGHILKMFPSTWYVUO])|Ter|X|\\*|=))(?:\\))?(?![A-Za-z0-9])',32)
+    DNA=re.compile('(?<![A-Za-z0-9_])(?:[A-Z][A-Z0-9_]*\\.\\d+:)?[cgnmr]\\.\\s*(?:\\d+|\\*\\d+|-\\d+)(?:[+-]\\d+)?(?:_(?:\\d+|\\*\\d+|-\\d+)(?:[+-]\\d+)?)?(?:[ACGTU]+>[ACGTU]+|delins[ACGTU]+|del[ACGTU]*|dup[ACGTU]*|ins[ACGTU]+|=)(?![A-Za-z0-9])',32)
+    NEGATIVE=re.compile('\\b(?:not|no longer|absent|without|lack(?:ing)?|excluded|undetectable|undetected)\\b',34)
+    UNCERTAIN=re.compile('\\b(?:might|may|could|possibly|presumably|resembling|suggestive)\\b|[- ]like\\b',34)
+
+    def _text(value):return str(value or '').strip()
+    def _sequence_check(value,sequence):
+        if not sequence:return 'NOT_CHECKED_REFERENCE_UNAVAILABLE'
+        for residue,position in re.findall('('+TRI+')([1-9][0-9]*)',value):
+            if int(position)>len(sequence):return 'POSITION_OUT_OF_RANGE'
+            if sequence[int(position)-1]!=REVERSE[residue]:return 'REFERENCE_RESIDUE_MISMATCH'
+        return 'STATED_REFERENCE_RESIDUES_MATCH'
+
+    def aa(value, stop=False, nonsense=False):
+        if value in REVERSE:return value
+        if value in AA:return AA[value]
+        if stop and value in {'Ter','*'}:return 'Ter'
+        if stop and nonsense and value=='X':return 'Ter'
+        raise ValueError('UNKNOWN_OR_AMBIGUOUS_AMINO_ACID')
+
+    def aa_sequence(value):
+        if not value:return ''
+        if re.fullmatch('[ARNDCEQGHILKMFPSTWYVUO]+',value):return ''.join(AA[c] for c in value)
+        if re.fullmatch('(?:'+TRI+')+',value):return value
+        raise ValueError('INSERTED_SEQUENCE_UNRESOLVED')
+
+    def syntax(raw,kind):
+        s=re.sub(r'^p\.\s*','',raw.strip())
+        predicted=s.startswith('(') and s.endswith(')')
+        s=s.strip('()')
+        nonsense=str(kind).casefold()=='nonsense'
+        def output(body):return 'p.'+('('+body+')' if predicted else body)
+        m=re.fullmatch('('+R+')([1-9][0-9]*)('+R+'|Ter|X|\\*|=)',s)
+        if m:
+            left,pos,right=m.groups()
+            ref=aa(left);alt=aa(right,stop=True,nonsense=nonsense) if right!='=' else '='
+            return output(ref+pos+('=' if alt==ref else alt))
+        m=re.fullmatch('('+R+')([1-9][0-9]*)('+R+')?fs(?:(?:Ter|X|\\*)([1-9][0-9]*|\\?))?',s)
+        if m:
+            left,pos,alt,stop=m.groups()
+            if stop and not alt:raise ValueError('INCOMPLETE_FRAMESHIFT')
+            return output(aa(left)+pos+(aa(alt) if alt else '')+'fs'+('Ter'+stop if stop else ''))
+        m=re.fullmatch('('+R+')([1-9][0-9]*)(?:_('+R+')([1-9][0-9]*))?(delins|ins|del|dup)(.*)',s)
+        if not m:raise ValueError('UNSUPPORTED_PROTEIN_SYNTAX')
+        left,start,right,end,op,insert=m.groups()
+        if end and int(end)<=int(start):raise ValueError('INVALID_RANGE')
+        if op=='ins' and (not end or int(end)!=int(start)+1):raise ValueError('NONADJACENT_INSERTION_FLANKS')
+        if op in {'ins','delins'} and not insert:raise ValueError('INSERTED_SEQUENCE_UNKNOWN')
+        if op in {'del','dup'} and insert:raise ValueError('INDEL_SUFFIX_UNRESOLVED')
+        return output(aa(left)+start+('_'+aa(right)+end if right else '')+op+(aa_sequence(insert) if insert else ''))
+
+    def clean(text,kind,sequence):
+        text=_text(text);variants=[];notes=[];spans=[]
+        dna=list(DNA.finditer(text))
+        for match in TOKEN.finditer(text):
+            if any(match.start()<d.end() and match.end()>d.start() for d in dna):continue
+            if re.search(r'[cgnmr]\.\s*$',text[:match.start()]):continue
+            try:value=syntax(match[0],kind)
+            except ValueError as exc:notes.append(str(exc));continue
+            # Do not erase one component of an explicit compound by treating a
+            # newly formatted token as a different allele. Equivalent aliases merge.
+            canonical=value.replace('p.(','p.').removesuffix(')')
+            if canonical not in [v.replace('p.(','p.').removesuffix(')') for v in variants]:
+                variants.append(value)
+            spans.append((match.start(),match.end()))
+        for match in re.finditer(r'[Δ∆]\s*('+R+')([1-9][0-9]*)(?![A-Za-z0-9])',text):
+            value='p.'+aa(match[1])+match[2]+'del'
+            if value not in variants:variants.append(value)
+        if not variants:
+            for match in re.finditer('('+R+r')([1-9][0-9]*)\s*(?:->|→|>)\s*('+R+r'|Ter|\*)',text):
+                value=syntax(match[1]+match[2]+match[3],kind)
+                if value not in variants:variants.append(value)
+        if variants:
+            # A comparison between distinct mutant records must not become a
+            # multi-point construct. Wild-type-only comparisons have one variant.
+            if len(variants)>1 and re.search(r'\b(?:versus|vs\.?|compared\s+(?:with|to)|rather\s+than)\b',text,re.I):
+                return '', 'REVIEW_COMPARATOR_AMBIGUITY',notes
+            checked=[_sequence_check(v,sequence) for v in variants]
+            if any(v in {'REFERENCE_RESIDUE_MISMATCH','POSITION_OUT_OF_RANGE'} for v in checked):
+                notes.append('REFERENCE_MISMATCH_RETAINED_AS_SOURCE_NOTATION; coordinates were not corrected')
+            return ', '.join(variants),'PROTEIN_LIST_FORMATTED' if len(variants)>1 else 'PROTEIN_SINGLE_FORMATTED',notes
+        if dna:
+            expressions=list(dict.fromkeys(re.sub(r'\s+','',m[0]) for m in dna))
+            return ', '.join(expressions),'DNA_RNA_NOTATION_ONLY',notes
+        return '', 'NO_UNAMBIGUOUS_EXPRESSION_BLANKED',notes
+
+    def map_location(raw):
+        text=_text(raw)
+        if text.casefold() in {'','*','unknown','not_reported','not reported','no change','unchanged','none'}:
+            return '*',['NO_EXPLICIT_COMPARTMENT']
+        hits=[];flags=[];candidates=[]
+        for label,pattern in RULES:
+            candidates.extend((m.start(),m.end(),label) for m in re.finditer(pattern,text,re.I))
+        candidates.sort(key=lambda item:(-(item[1]-item[0]),item[0]))
+        for start,end,label in candidates:
+            # Longer specific compartments suppress a generic overlapping term.
+            if any(start<prior_end and end>prior_start for prior_start,prior_end,_ in hits):continue
+            boundary=max(text.rfind(';',0,start),text.rfind(',',0,start),text.rfind('.',0,start))+1
+            prefix=text[boundary:start]
+            prefix=re.sub(r'\bnot\s+(?:only|exclusively|solely|restricted|confined)\b','',prefix,flags=re.I)
+            if NEGATIVE.search(prefix):
+                flags.append('NEGATED_LOCATION_NOT_USED');continue
+            local=text[max(boundary,start-25):min(len(text),end+8)]
+            if UNCERTAIN.search(local):
+                flags.append('UNCERTAIN_LOCATION_NOT_USED');continue
+            hits.append((start,end,label))
+        # Coarse intracellular/shape labels add no information when a stated
+        # compartment already describes the same side. Keep them only as fallback.
+        labels=[]
+        for start,end,label in sorted(hits):
+            if label not in labels:labels.append(label)
+        if any(not name.startswith('Other-') for name in labels):
+            labels=[name for name in labels if name not in {'Other-Intracellular','Other-Punctate structures'}]
+        if not labels:return '*',list(dict.fromkeys(flags+['NO_UNAMBIGUOUS_COMPARTMENT']))
+        return ';'.join(labels),list(dict.fromkeys(flags))
+
+    def extract_explicit(raw,kind,seq):
+        text=str(raw or '');transformed=text
+        for name,residue in sorted(NAMES.items(),key=lambda x:-len(x[0])):
+            transformed=re.sub(r'(?<![A-Za-z])'+re.escape(name)+r'(?![A-Za-z])',residue,transformed,flags=re.I)
+        transformed=transformed.replace('–','-').replace('—','-').replace('−','-')
+        transformed=re.sub('('+R+r')\s+(?:at\s+)?(?:position|residue|codon)\s+([1-9][0-9]*)',r'\1\2',transformed)
+        # Coordinate, original residue and alternate residue are all explicit.
+        expressions=[]
+        patterns=[
+          POS+r'\s*(?:was\s+|is\s+)?(?:replaced\s+(?:by|with)|substituted\s+(?:by|with|to)|changed\s+to|mutated\s+to|to|->|→|>)\s*'+ALT,
+          POS+r'\s*-\s*'+ALT,
+          POS+r'\s+('+R+r'|Ter)\b',
+          POS+r'\s*\(\s*'+ALT+r'\s*\)',
+        ]
+        for pattern in patterns:
+            for m in re.finditer(pattern,transformed):
+                ref,pos,alt=m.groups()
+                alt='Ter' if alt in {'stop','termination'} else alt
+                try:value=syntax(ref+pos+alt,kind)
+                except ValueError:continue
+                if value not in expressions:expressions.append(value)
+        # Full-name replacements can also create already-standard compact tokens.
+        simple,status,notes=clean(transformed,kind,seq)
+        if status in {'PROTEIN_SINGLE_FORMATTED','PROTEIN_LIST_FORMATTED'}:
+            for value in simple.split(', '):
+                if value not in expressions:expressions.append(value)
+        if not expressions:return '', 'NO_EXPLICIT_SUBSTITUTION_OR_EDIT'
+        required={'Deletion':'del','Insertion':'ins','Duplication':'dup','Frameshift':'fs','Nonsense':'Ter'}
+        if kind in required and not any(required[kind] in value for value in expressions):
+            return '', 'EXTRACTED_VARIANT_KIND_DIFFERS_FROM_TARGET'
+        if len(expressions)>1 and re.search(r'\bversus\b|\bvs\.?|compared\s+(?:with|to)|rather\s+than',transformed,re.I):
+            return '', 'COMPARATOR_BINDING_REQUIRED'
+        if any(_sequence_check(v,seq) in {'REFERENCE_RESIDUE_MISMATCH','POSITION_OUT_OF_RANGE'} for v in expressions):
+            return '', 'EXPLICIT_NOTATION_REFERENCE_MISMATCH'
+        return ', '.join(expressions),('EXPLICIT_FORMAT_AND_REFERENCE_CHECKED' if seq else 'EXPLICIT_FORMAT_REFERENCE_CHECK_PENDING')
+
+
+    DISPLAY_FIELDS=('Mutation Information','Mislocalization Phenotype','Mislocalization Phenotype（before）',
+                    'Mislocalization Phenotype（after）','Localization Change Detail')
+
+
+    def restore_originals(row,original_values):
+        restored=copy.deepcopy(row)
+        for key in DISPLAY_FIELDS:
+            if key in original_values and key in row:restored[key]=original_values[key]
+        return restored
+
+
+    def format_record(row):
+        result=copy.deepcopy(row)
+        originals={key:row.get(key) for key in DISPLAY_FIELDS if key in row}
+        value,status,notes=clean(row.get('Mutation Information'),row.get('Mutation Type'),row.get('Wild Sequence_new') or '')
+        if not value:
+            candidate,reason=extract_explicit(row.get('Mutation Information'),row.get('Mutation Type'),row.get('Wild Sequence_new') or '')
+            if candidate:value,status=candidate,reason
+        result['Mutation Information']=value
+        before,bflags=map_location(row.get(DISPLAY_FIELDS[2]));after,aflags=map_location(row.get(DISPLAY_FIELDS[3]))
+        main=_text(row.get('Mislocalization Phenotype'))
+        result[DISPLAY_FIELDS[2]]=before;result[DISPLAY_FIELDS[3]]=after
+        result['Mislocalization Phenotype']=main if main in {'No change','Observation only'} else before+'>'+after
+        if any(result.get(key)!=row.get(key) for key in DISPLAY_FIELDS[1:4]):
+            appendix='Original localization wording — before: '+_text(row.get(DISPLAY_FIELDS[2]))+'; after: '+_text(row.get(DISPLAY_FIELDS[3]))
+            detail=_text(row.get('Localization Change Detail'))
+            if appendix not in detail:result['Localization Change Detail']=(detail+'\n'+appendix).strip()
+        flags=list(dict.fromkeys(bflags+aflags))
+        if main!='No change' and before!='*' and set(before.split(';'))==set(after.split(';')):
+            flags.append('SAME_COMPARTMENTS_DO_NOT_IMPLY_NO_CHANGE')
+        return result,{'id':row.get('id'),'original_values':originals,'mutation_status':status,
+                      'mutation_notes':notes,'location_flags':flags,'mutation_unresolved':not bool(value),
+                      'fully_qualified_hgvs_certified':False,'allele_phase_inferred':False}
+
+
+    def format_records(rows):
+        formatted=[];audit=[]
+        for row in rows:
+            result,entry=format_record(row);formatted.append(result);audit.append(entry)
+        return formatted,audit
+
+    from types import SimpleNamespace
+    return SimpleNamespace(format_record=format_record, format_records=format_records,
+                           restore_originals=restore_originals, DISPLAY_FIELDS=DISPLAY_FIELDS,
+                           clean=clean, map_location=map_location, extract_explicit=extract_explicit)
+
+DISPLAY = _build_display_rules()

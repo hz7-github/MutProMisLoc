@@ -14,7 +14,7 @@ from io import BytesIO
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-VERSION = 'records-summary-1.2.0'
+VERSION = 'records-summary-1.4.0'
 
 
 def module(name, filename):
@@ -38,13 +38,117 @@ def path_label(path):
     return path.relative_to(ROOT).as_posix() if path.is_relative_to(ROOT) else path.as_posix()
 
 
+
+
+def _build_metadata_rules():
+    """Recover optional metadata from source-matched saved review evidence only.
+
+    Rules classify verified quotations, not free model prose or raw extraction enums.
+    Unknown/unreported information stays blank. These are evidence types, not scores.
+    """
+    import re
+
+    FIELDS=('Evidence_Type','Quantitative_Reported','Redistribution_Extent','No_Change_Basis','Cell_System_Type')
+    SPATIAL=r'\b(?:immunofluorescen\w*|immunostain\w*|confocal|fluorescen\w* microscop\w*|electron microscop\w*|fluorescen\w* imag\w*)\b'
+    BIOCHEM=r'\b(?:subcellular fractionation|cell fractionation|membrane fractionation|surface biotinylation|surface accessibility|protease protection)\b'
+    LOCATION=r'\b(?:locali[sz]\w*|redistribut\w*|nucle(?:ar|us)|cytoplas\w*|cytosol\w*|membrane|cell surface|colocali[sz]\w*|compartments?)\b'
+
+
+    def recover(review,units,parser,normalizer):
+        values=dict.fromkeys(FIELDS);verified={};proofs={};unmatched=0
+        for ref in review.get('evidence',[]):
+            if not isinstance(ref,dict):continue
+            quote=ref.get('quote');unit=units.get(ref.get('source_id'),{}).get('text','')
+            if not isinstance(quote,str) or not quote.strip():continue
+            q=parser.normalize_quote_text(quote)
+            if not q or q not in parser.normalize_quote_text(unit):unmatched+=1;continue
+            claim=ref.get('claim','')
+            for prefix in ('annotation.','checks.'):
+                if claim.startswith(prefix):claim=claim[len(prefix):]
+            verified.setdefault(claim,[]).append(quote)
+            proofs.setdefault(claim,[]).append({'claim':claim,'source_id':ref.get('source_id')})
+        used={};rules={}
+        def put(field,value,rule,claims):
+            values[field]=value;rules[field]=rule
+            used[field]=[p for claim in claims for p in proofs.get(claim,[])]
+        def quotes(*claims):return '\n'.join(q for claim in claims for q in verified.get(claim,[]))
+        def has(pattern,text):return bool(re.search(pattern,text,re.I))
+        checks=review.get('checks',{});annotation=review.get('annotation',{})
+        method=quotes('experimental_method')
+        direct=checks.get('direct_localization_measurement')=='SUPPORTED' and bool(verified.get('direct_localization_measurement'))
+        # Do not classify a method stated only as explicitly excluded/not used.
+        method_parts=[p for p in re.split(r'[.;\n]',method) if not has(r'\b(?:not used|did not use|without using|no imaging|not performed)\b',p)]
+        method='\n'.join(method_parts)
+        if direct and has(SPATIAL,method):
+            put('Evidence_Type','SPATIAL_DIRECT','verified direct-localization check and imaging method quote',('experimental_method','direct_localization_measurement'))
+        elif direct and has(BIOCHEM,method):
+            put('Evidence_Type','BIOCHEMICAL_LOCALIZATION','verified direct-localization check and biochemical localization method quote',('experimental_method','direct_localization_measurement'))
+        quantitative=quotes('quantitative_result')
+        if quantitative and has(LOCATION,quantitative):
+            negative=has(r'\b(?:not quantified|no quantification|without quantification|quantification was not|not quantitatively)\b',quantitative)
+            if negative:
+                put('Quantitative_Reported','NO','explicit statement that localization was not quantified',('quantitative_result',))
+            elif has(r'\d|\bquantif\w*\b',quantitative) and has(r'%|\b(?:percent\w*|ratio\w*|quantif\w*|intensit\w*|fraction of cells|proportion\w*)\b',quantitative):
+                put('Quantitative_Reported','YES','verified localization measurement; abundance/sample-size alone is insufficient',('quantitative_result',))
+        outcome=review.get('outcome_class')
+        comparison=checks.get('comparator_binding')=='SUPPORTED' and bool(verified.get('comparator_binding'))
+        outcome_supported=checks.get('outcome_supported')=='SUPPORTED' and bool(verified.get('outcome_supported'))
+        if outcome=='normal_experimentally_confirmed' and comparison and direct and outcome_supported:
+            put('Redistribution_Extent','NO_CHANGE','source-supported normal outcome with direct matched comparison',('outcome_supported','comparator_binding','direct_localization_measurement'))
+            comparison_quote=quotes('outcome_supported','effect_description','comparator_binding')
+            if values['Quantitative_Reported']=='YES' and has(r'\bwild[- ]type\b|\bWT\b|\bmutant\w*\b',quantitative):
+                put('No_Change_Basis','QUANTITATIVE_COMPARISON','source-verified localization quantification and matched comparison',('quantitative_result','comparator_binding','outcome_supported'))
+            elif has(r'no (?:significant )?(?:change|difference)[^.\n]{0,60}(?:locali[sz]|distribut)|(?:locali[sz]\w*|distribut\w*)[^.\n]{0,60}(?:unchanged|unaffected|identical)|same (?:subcellular )?(?:locali[sz]ation|distribution)',comparison_quote):
+                put('No_Change_Basis','EXPLICIT_NO_CHANGE_STATEMENT','explicit source statement bound to the confirmed outcome',('outcome_supported','effect_description','comparator_binding'))
+            elif values['Evidence_Type']=='SPATIAL_DIRECT':
+                put('No_Change_Basis','QUALITATIVE_COMPARISON','verified imaging and matched normal-outcome comparison',('experimental_method','comparator_binding','outcome_supported'))
+        elif outcome=='mislocalization' and outcome_supported:
+            result=quotes('effect_description','outcome_supported')
+            if has(LOCATION,result):
+                if has(r'\b(?:partially|partial)\s+(?:redistribut\w*|relocat\w*|mislocali[sz]\w*|retained|retention)|\bpartial loss of (?:nuclear|membrane|surface|locali[sz])',result):
+                    put('Redistribution_Extent','PARTIAL','explicit partial localization outcome quote',('effect_description','outcome_supported'))
+                elif has(r'\b(?:completely|complete)\s+(?:redistribut\w*|relocat\w*|mislocali[sz]\w*|retained|retention)|\bcomplete exclusion from (?:the )?(?:nucleus|membrane)',result):
+                    put('Redistribution_Extent','COMPLETE','explicit complete localization outcome quote',('effect_description','outcome_supported'))
+        # Annotated cell/system must be backed by a source-matched cell-line quote.
+        cell=annotation.get('cell_line') or '';cell_quote=quotes('cell_line')
+        if cell_quote and cell and str(cell).casefold() not in {'not_reported','unknown'}:
+            compact=lambda s:re.sub('[^a-z0-9]','',s.casefold())
+            matched=compact(cell) in compact(cell_quote)
+            if matched:
+                for pattern,value in [(r'\borganoid\w*\b','ORGANOID_3D'),
+                                      (r'\bstem[- ]cell[- ]derived\b|\biPSC[- ]derived\b','STEM_CELL_DERIVED'),
+                                      (r'\bprimary (?:cells|neurons|fibroblasts|hepatocytes|cultures)\b','PRIMARY_CELLS'),
+                                      (r'\btissue sections?\b|\btissue samples?\b','TISSUE'),
+                                      (r'\bcell[- ]free\b','CELL_FREE')]:
+                    if has(pattern,cell):
+                        put('Cell_System_Type',value,'explicit system description in source-bound cell annotation',('cell_line',));break
+            if values['Cell_System_Type'] is None:
+                canonical,ids,notes=normalizer.normalize_cell(cell)
+                if ids:
+                    supported=False
+                    for name,accession,aliases in normalizer.CELL_LINES:
+                        if accession not in ids:continue
+                        for alias in [name,*aliases]:
+                            pattern=r'(?<![A-Za-z0-9])'+re.escape(alias).replace(r'\-',r'[- ]?')+r'(?![A-Za-z0-9])'
+                            if has(pattern,cell_quote):supported=True
+                    if supported:put('Cell_System_Type','CELL_LINE','recognized cell-line identity also present in the verified quotation',('cell_line',))
+        return values,{'rules':rules,'evidence':used,'unmatched_quotes_ignored':unmatched,
+                       'unfilled_fields':[k for k,v in values.items() if v is None],
+                       'no_change_basis_applicable':outcome=='normal_experimentally_confirmed'}
+
+    from types import SimpleNamespace
+    return SimpleNamespace(recover=recover, FIELDS=FIELDS)
+
+EVIDENCE_METADATA = _build_metadata_rules()
+
+
 def known(value):
     if value is None or str(value).strip().casefold() in {'', 'unknown', 'not_reported', 'not reported', 'null', 'n/a', 'na', '*', 'undetermined'}:
         return None
     return str(value).strip()
 
 
-def stage_row(item, original, title, normalizer):
+def stage_row(item, original, title, normalizer, source_units=None, source_parser=None):
     review = item['review']; annotation = review.get('annotation', {})
     row = {h: None for h in normalizer.BASE_COLUMNS + [normalizer.DETAIL]}
     before = known(annotation.get('normal_localization'))
@@ -78,10 +182,17 @@ def stage_row(item, original, title, normalizer):
                 'Expression_Regime': known(annotation.get('expression_regime')),
                 'Outcome_Provenance': provenance,
                 normalizer.DETAIL: '\n'.join(x for x in details if x)})
-    # Metadata enums not adjudicated by the current schema stay blank. Do not
-    # infer quantitative extent, tag position or evidence type from keywords.
+    metadata = EVIDENCE_METADATA
+    if source_units is not None and source_parser is not None:
+        recovered, metadata_audit = metadata.recover(review, source_units, source_parser, normalizer)
+        row.update(recovered)
+    else:
+        metadata_audit = {'unfilled_fields': list(metadata.FIELDS), 'reason': 'SOURCE_UNITS_UNAVAILABLE'}
+    display = normalizer.DISPLAY
+    row, display_audit = display.format_record(row)
     return row, {'mutation_note': mutation_note, 'type_note': type_note,
-                 'cell_notes': cell_notes, 'localization_wording_preserved': True}
+                 'cell_notes': cell_notes, 'localization_wording_preserved': True,
+                 'evidence_metadata': metadata_audit, 'record_display': display_audit}
 
 
 def classify(item, context_flags):
@@ -208,6 +319,8 @@ def run(args):
     assert len(columns) == 26
     tables = {'Records': []}
     audit_rows = []; canonical = []; status_counts = collections.Counter()
+    metadata_parser = module('stage_metadata_source_units', '_internal/source_evidence.py')
+    metadata_units = {}
     for item in items:
         rid = item['id']; review = item['review']; original = originals[rid]
         context = flags[rid] + [r['reason'] for r in item.get('source_audit_flags', [])]
@@ -217,7 +330,13 @@ def run(args):
         annotation = review.get('annotation', {})
         output_row, normalization = None, None
         if status == 'STAGE_A':
-            output_row, normalization = stage_row(item, original, metadata.get(str(item['PMID'])), n)
+            source = (ROOT / item.get('source_path', f"data/03_mineru_pdf_to_md/expanded/clean/{item['PMID']}.md")).resolve()
+            source_units = None
+            if source.is_relative_to(ROOT) and source.is_file() and digest(source) == item['source_sha256']:
+                if source not in metadata_units:
+                    metadata_units[source], _ = metadata_parser.complete_text_units(source.read_text(encoding='utf-8-sig'), metadata_parser)
+                source_units = metadata_units[source]
+            output_row, normalization = stage_row(item, original, metadata.get(str(item['PMID'])), n, source_units, metadata_parser)
             tables['Records'].append([output_row[h] for h in columns])
             assert all(output_row[h] is None for h in n.BLANK_COLUMNS)
         audit_rows.append([rid, str(item['PMID']), review['tier'], status, decision_label(status),
@@ -266,11 +385,16 @@ def run(args):
             raise ValueError('Wrong stage column count.')
     check.close(); temporary.replace(workbook_path)
     audit_dir = out / 'audit'; audit_dir.mkdir()
+    (audit_dir / 'evidence_metadata.json').write_text(json.dumps([
+        {'id': r['id'], **r['normalization']['evidence_metadata']}
+        for r in canonical if r['normalization']], ensure_ascii=False, indent=2), encoding='utf-8')
     (audit_dir / 'stage_records.json').write_text(json.dumps(canonical, ensure_ascii=False, indent=2), encoding='utf-8', newline='\n')
     with (audit_dir / 'record_audit.csv').open('w', encoding='utf-8-sig', newline='') as stream:
         writer = csv.writer(stream); writer.writerow(audit_headers)
         writer.writerows([["'" + v if isinstance(v, str) and v.lstrip().startswith(('=', '+', '-', '@')) else v for v in row] for row in audit_rows])
     selected = [r for r in canonical if r['stage_status'] == 'STAGE_A']
+    (audit_dir / 'record_display.json').write_text(json.dumps([
+        r['normalization']['record_display'] for r in selected], ensure_ascii=False, indent=2), encoding='utf-8')
     identity_by_id = {r['id']: r for r in identity_rows} if identity_input else {}
     source_members = {}
     for entry in selected:
@@ -279,6 +403,7 @@ def run(args):
             source_path=identity_by_id.get(r['id'], {}).get('source_path', r.get('source_path')),
             source_sha256=r['source_sha256']) for r in members]
     payload = {'schema_version': VERSION, 'tier': 'A', 'columns': columns,
+               'display_originals': {r['id']: r['normalization']['record_display']['original_values'] for r in selected},
                'records': [r['row'] for r in selected], 'source_members': source_members,
                'eligibility': {r['id']: {'stage_status': r['stage_status'], 'source_sha256': r['source_sha256']} for r in selected}}
     (out / 'records.json').write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding='utf-8', newline='\n')

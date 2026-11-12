@@ -294,6 +294,12 @@ class UniProtClient:
             exact = name.casefold() in {text(v).casefold() for v in N.HumanUniProtLookup.exact_names(entry)}
             if not identity_ok or entry.get('organism',{}).get('taxonId')!=9606 or not exact:
                 return {**response,'status':'ACCESSION_IDENTITY_CONFLICT','matches':[]}
+            entry_type = entry.get('entryType', '')
+            if entry_type.startswith('UniProtKB unreviewed'):
+                if not self.include_unreviewed:
+                    return {**response,'status':'UNREVIEWED_NOT_ALLOWED','matches':[]}
+            elif not entry_type.startswith('UniProtKB reviewed'):
+                return {**response,'status':'INVALID_RESPONSE','matches':[]}
             return {**response,'status':'UNIQUE','matches':[entry]}
         for reviewed in ([True,False] if self.include_unreviewed else [True]):
             query = f'organism_id:9606 AND reviewed:{str(reviewed).lower()} AND (gene_exact:"{name}" OR protein_name:"{name}")'

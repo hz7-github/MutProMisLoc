@@ -2,6 +2,9 @@
 
 Offline by default. Use --online for new model requests. All intermediate
 records and decisions remain in work/ and audit/, outside the final tables.
+Mutation/localization display and source-backed metadata recovery are integrated
+into this step through the existing runtime modules.
+Step 06 handles ClinVar classification after resolving protein references.
 """
 from __future__ import annotations
 

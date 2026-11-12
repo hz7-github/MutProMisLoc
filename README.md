@@ -61,25 +61,31 @@ PDFs, converted full text, model responses, database caches and results are gene
 | 03 | [03_mineru_pdf_to_md.py](scripts/03_mineru_pdf_to_md.py) | Raw and clean Markdown |
 | 04 | [04_extract_deepseek.py](scripts/04_extract_deepseek.py) | `extracted_records.json`, per-paper records and model responses |
 | 05 | [05_build_records.py](scripts/05_build_records.py) | Source-adjudicated `records.xlsx/.json/.csv` |
-| 06 | [06_enrich_records.py](scripts/06_enrich_records.py) | Enriched `completed_records.xlsx/.json/.csv` |
+| 06 | [06_enrich_records.py](scripts/06_enrich_records.py) | UniProt/reference enrichment and ClinVar annotation in `completed_records.xlsx/.json/.csv` |
 
 Shared runtime modules live in `scripts/_internal/` and are loaded by the numbered entry points.
+ClinVar belongs in Step 06: Steps 02–03 prepare full text, Step 04 extracts literature
+records, and Step 05 verifies and normalizes them. Step 06 resolves protein identity
+and reference sequences, checks export eligibility, then queries ClinVar before
+exporting the final 26-column table. The main workflow and Demo use the same Step 06;
+their existing `--online` commands enable ClinVar without an extra script or command.
+Step 05 also recovers evidence type, localization quantification, redistribution extent, no-change basis and cell-system type from source-matched saved review quotations. Unsupported metadata stays blank. Step 06 preserves these fields while enriching database identifiers and reference sequences. Recovery rules and source-unit references are saved in the audit files.
+
+Steps 05 and 06 share compact display rules for Mutation Information and the three localization columns. Multiple protein variants use comma-separated p. expressions; localization uses Before>After, semicolons and explicit No change. Unresolved variants remain blank and unknown locations use *. Original descriptions are retained in display_originals and audit files. Step 06 restores those descriptions before completeness and sequence validation, then formats its final export. Demo uses the same rules. Formatting and evidence metadata recovery are integrated into the existing modules; no separate command is required.
 Demo metadata consists of `papers_available.xlsx`, `papers_sample100.xlsx` and `papers_sample100.csv`
 in `demo/data/01_sample_papers/`.
 
-## API configuration and reference data
+## API configuration
 
-Copy `.env.example` to `.env` at the project root and set `DEEPSEEK_API_KEY`.
-Steps 04 and 05 use model requests; Step 05 requires `--online` to allow new requests.
-Prepare the HGNC name reference JSON before Step 06:
+- DeepSeek (Steps 04–05): [Apply for an API key](https://platform.deepseek.com/api_keys).
+- NCBI / ClinVar (Step 06, optional): [Apply for an API key](https://www.ncbi.nlm.nih.gov/account/settings/).
 
-```bash
-mkdir -p data/06_completed_records/reference
-curl --fail --location https://storage.googleapis.com/public-download-files/hgnc/json/json/hgnc_complete_set.json --output data/06_completed_records/reference/hgnc_complete_set.json
+Place the keys in `.env` at the project root, beside `README.md`. Copy `.env.example` as a starting point:
+
+```dotenv
+DEEPSEEK_API_KEY=your_deepseek_api_key
+NCBI_API_KEY=your_ncbi_api_key
 ```
-
-Alternatively, supply an existing reference with `--hgnc`. Use `--online` for new database queries;
-subsequent runs can reuse locally stored caches.
 
 ## Run the Demo
 
