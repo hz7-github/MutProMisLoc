@@ -64,16 +64,6 @@ PDFs, converted full text, model responses, database caches and results are gene
 | 06 | [06_enrich_records.py](scripts/06_enrich_records.py) | UniProt/reference enrichment and ClinVar annotation in `completed_records.xlsx/.json/.csv` |
 
 Shared runtime modules live in `scripts/_internal/` and are loaded by the numbered entry points.
-ClinVar belongs in Step 06: Steps 02–03 prepare full text, Step 04 extracts literature
-records, and Step 05 verifies and normalizes them. Step 06 resolves protein identity
-and reference sequences, checks export eligibility, then queries ClinVar before
-exporting the final 26-column table. The main workflow and Demo use the same Step 06;
-their existing `--online` commands enable ClinVar without an extra script or command.
-Step 05 also recovers evidence type, localization quantification, redistribution extent, no-change basis and cell-system type from source-matched saved review quotations. Unsupported metadata stays blank. Step 06 preserves these fields while enriching database identifiers and reference sequences. Recovery rules and source-unit references are saved in the audit files.
-
-Steps 05 and 06 share compact display rules for Mutation Information and the three localization columns. Multiple protein variants use comma-separated p. expressions; localization uses Before>After, semicolons and explicit No change. Unresolved variants remain blank and unknown locations use *. Original descriptions are retained in display_originals and audit files. Step 06 restores those descriptions before completeness and sequence validation, then formats its final export. Demo uses the same rules. Formatting and evidence metadata recovery are integrated into the existing modules; no separate command is required.
-Demo metadata consists of `papers_available.xlsx`, `papers_sample100.xlsx` and `papers_sample100.csv`
-in `demo/data/01_sample_papers/`.
 
 ## API configuration
 
