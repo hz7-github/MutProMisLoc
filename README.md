@@ -4,6 +4,8 @@ A biomedical literature workflow for mutation-associated protein localization:
 retrieve PubMed metadata, download public full text, convert PDFs with MinerU,
 and extract candidate records with DeepSeek.
 
+For baseline model code, data and instructions, see [MutProMisLoc_base_model](MutProMisLoc_base_model/README.md).
+
 ## Requirements
 
 - Ubuntu with Bash and Conda/Miniconda; Python 3.12.
