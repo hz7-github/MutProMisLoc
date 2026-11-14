@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "split_policy": "existing frozen assignments; no new split",
+  "validation_folds": 5,
+  "shared_independent_test_set": true,
+  "partitions": {
+    "development": {
+      "samples": 3233,
+      "positive": 1229,
+      "negative": 2004,
+      "clusters": 920,
+      "sequence_records": 4288
+    },
+    "test": {
+      "samples": 762,
+      "positive": 286,
+      "negative": 476,
+      "clusters": 242,
+      "sequence_records": 1030
+    },
+    "folds/fold_0/train": {
+      "samples": 2574,
+      "positive": 1015,
+      "negative": 1559,
+      "clusters": 735,
+      "sequence_records": 3414
+    },
+    "folds/fold_0/validation": {
+      "samples": 659,
+      "positive": 214,
+      "negative": 445,
+      "clusters": 185,
+      "sequence_records": 874
+    },
+    "folds/fold_1/train": {
+      "samples": 2518,
+      "positive": 935,
+      "negative": 1583,
+      "clusters": 740,
+      "sequence_records": 3374
+    },
+    "folds/fold_1/validation": {
+      "samples": 715,
+      "positive": 294,
+      "negative": 421,
+      "clusters": 180,
+      "sequence_records": 914
+    },
+    "folds/fold_2/train": {
+      "samples": 2577,
+      "positive": 995,
+      "negative": 1582,
+      "clusters": 734,
+      "sequence_records": 3419
+    },
+    "folds/fold_2/validation": {
+      "samples": 656,
+      "positive": 234,
+      "negative": 422,
+      "clusters": 186,
+      "sequence_records": 869
+    },
+    "folds/fold_3/train": {
+      "samples": 2708,
+      "positive": 1030,
+      "negative": 1678,
+      "clusters": 751,
+      "sequence_records": 3575
+    },
+    "folds/fold_3/validation": {
+      "samples": 525,
+      "positive": 199,
+      "negative": 326,
+      "clusters": 169,
+      "sequence_records": 713
+    },
+    "folds/fold_4/train": {
+      "samples": 2555,
+      "positive": 941,
+      "negative": 1614,
+      "clusters": 720,
+      "sequence_records": 3370
+    },
+    "folds/fold_4/validation": {
+      "samples": 678,
+      "positive": 288,
+      "negative": 390,
+      "clusters": 200,
+      "sequence_records": 918
+    }
+  },
+  "files": {
+    "development.csv": {
+      "sha256": "57dc84fe30841825920eecaa1142df0f6d7ab47f2e13bd07c682dfe6cebc254a",
+      "bytes": 373747
+    },
+    "development.fa": {
+      "sha256": "8d39abd7821f16dce760d28fa7176432b24c3804239da4c148613a56abbed530",
+      "bytes": 2830333
+    },
+    "folds/fold_0/train.csv": {
+      "sha256": "247efbeb9c30379941bd0bc5144569ef176b9fbee06a43633a74eaba49c2a190",
+      "bytes": 297637
+    },
+    "folds/fold_0/train.fa": {
+      "sha256": "215080989ca0f7adc588eee26be224a0e5401de2f239111223d81fb3e8afeb49",
+      "bytes": 2298186
+    },
+    "folds/fold_0/validation.csv": {
+      "sha256": "f9546b302482dc9ecad8be33844f4e1a5cf0a632cb0f808646ff85b9af303572",
+      "bytes": 76173
+    },
+    "folds/fold_0/validation.fa": {
+      "sha256": "456df905ab152c0d972c1cb9d4c43c621af7101ed255599754ae36e7d6d770ed",
+      "bytes": 532147
+    },
+    "folds/fold_1/train.csv": {
+      "sha256": "c9924c28395b6505c84a453677d44f45f387e2164b1c4e54b59aadfddde88061",
+      "bytes": 291073
+    },
+    "folds/fold_1/train.fa": {
+      "sha256": "727633fe819c04b81943463e1fa7496ef6a63050d67e27f98c530a1b5a565de4",
+      "bytes": 2162483
+    },
+    "folds/fold_1/validation.csv": {
+      "sha256": "db8f79fc15d2c6321646e1d08b67665a01d74124a454b9beddfbfe6d87c9b28b",
+      "bytes": 82737
+    },
+    "folds/fold_1/validation.fa": {
+      "sha256": "783bc29232f3672f168768dcbfd87c2253c3467d670f8f97d5f8096f5e104334",
+      "bytes": 667850
+    },
+    "folds/fold_2/train.csv": {
+      "sha256": "81d6d72169d9eedf624e295498134fbeaaf5f06fd75eb1cc3515c99c32a8e5d1",
+      "bytes": 297911
+    },
+    "folds/fold_2/train.fa": {
+      "sha256": "751b8f7a6d14638b681fd90fd945d5d38c48c52489096146d74fbc82de1bfb55",
+      "bytes": 2303064
+    },
+    "folds/fold_2/validation.csv": {
+      "sha256": "777e30a58253f208f1cc3cd62d04e99b6a82b44e6768a49a7cbef61247beca16",
+      "bytes": 75899
+    },
+    "folds/fold_2/validation.fa": {
+      "sha256": "f9061d46db926574650c58f851e437e28cd4fdffc4e390faf97944a076ba0bc3",
+      "bytes": 527269
+    },
+    "folds/fold_3/train.csv": {
+      "sha256": "b15b865b6bb8ae934c9511088e8b145faa288bc0f346e131de824901be40c5b0",
+      "bytes": 313089
+    },
+    "folds/fold_3/train.fa": {
+      "sha256": "9c55d74a40bd6c73c44131a2360c711b655af3dac88daace8955060a7d35eb7b",
+      "bytes": 2367615
+    },
+    "folds/fold_3/validation.csv": {
+      "sha256": "384b9a2a23b734aa5da59e5dce93d7fb4704738a183bdad6f5a0fc41246105fc",
+      "bytes": 60721
+    },
+    "folds/fold_3/validation.fa": {
+      "sha256": "0ca89a53987fea36c531d4c0691672105336f4d6f3b2b782ed2583cdd4846d32",
+      "bytes": 462718
+    },
+    "folds/fold_4/train.csv": {
+      "sha256": "d8460fb8d80649f4baddc575df6691e4edf8b0e83b2ab0ce450774f454b1cde9",
+      "bytes": 295341
+    },
+    "folds/fold_4/train.fa": {
+      "sha256": "af776f67d17f90f132761c3f8552773c1354063b55190697c5c2304da468c2eb",
+      "bytes": 2189984
+    },
+    "folds/fold_4/validation.csv": {
+      "sha256": "89f573ff0b8a63bc01c5fa4b9d95a63d6e302802247d5db1a13d93680ccb6bf6",
+      "bytes": 78469
+    },
+    "folds/fold_4/validation.fa": {
+      "sha256": "664bbdea7e60f178f916ec75526ba4f1be503595dcd410d99cf63ca00d48938e",
+      "bytes": 640349
+    },
+    "homology_edges.csv": {
+      "sha256": "61a7451efb68cecc0e3feecd9446ad2c0f5874f265103ea3b43bddd7f37b7fd0",
+      "bytes": 2572926
+    },
+    "manifest.json": {
+      "sha256": "3ac5a61b464800117f96638c72c21f5504e667b546521b8a49259da02b5c70ef",
+      "bytes": 1406
+    },
+    "proteins.fa": {
+      "sha256": "b8182fbda4b57cbd134f12ed1746eafaeda652967fed5941663875b0f2472431",
+      "bytes": 3435175
+    },
+    "samples.csv": {
+      "sha256": "1179c3147d0d54cbd597c0ee4a62f3d27c90d423f5c9a5d6a6d705ce94beed7b",
+      "bytes": 309914
+    },
+    "sequence_groups.csv": {
+      "sha256": "c1b195ecc13d6dff8d32ff0757e8c9dc4299492a1439076f2e7f8234b8411a4f",
+      "bytes": 326260
+    },
+    "splits.csv": {
+      "sha256": "13902d5c8a7f8b83856959923ff73f0b283087c3d785fb48e38890efa1f2617b",
+      "bytes": 457177
+    },
+    "test.csv": {
+      "sha256": "9df2a15bba45f088501584138d5813233d437058b515c856570419c2804eb9e9",
+      "bytes": 83493
+    },
+    "test.fa": {
+      "sha256": "f6987032c6f43fa3bf87d377f7e0b58da06f0bc108357e4c3bc3e4a40a5071ba",
+      "bytes": 604842
+    }
+  },
+  "provenance": {
+    "fasta_sha256": "b8182fbda4b57cbd134f12ed1746eafaeda652967fed5941663875b0f2472431",
+    "split_sha256": "13902d5c8a7f8b83856959923ff73f0b283087c3d785fb48e38890efa1f2617b",
+    "prepare_manifest_sha256": "3ac5a61b464800117f96638c72c21f5504e667b546521b8a49259da02b5c70ef",
+    "seed": 2026,
+    "identity": "nident/alnlen >= 0.40 (including gaps in alignment denominator)",
+    "coverage": "(abs(end-start)+1)/length >= 0.80 on the longer protein; equal lengths require both",
+    "grouping": "connected components of observed homology edges + exact duplicates + WT/MUT pair + optional protein_group"
+  }
+}

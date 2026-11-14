@@ -1,0 +1,16 @@
+name: MutProMisLoc_base_model
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.12
+  - pip
+  - setuptools>=68
+  - wheel
+  - mmseqs2=15.6f452
+  - pip:
+      - numpy==1.26.4
+      - pandas==2.2.3
+      - scikit-learn==1.6.1
+      - torch==2.5.1
+      - fair-esm==2.0.0

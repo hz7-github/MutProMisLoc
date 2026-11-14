@@ -1,0 +1,32 @@
+{
+  "fasta": "data/dataset/proteins.fa",
+  "samples": "data/dataset/samples.csv",
+  "fasta_sha256": "b8182fbda4b57cbd134f12ed1746eafaeda652967fed5941663875b0f2472431",
+  "samples_sha256": "1179c3147d0d54cbd597c0ee4a62f3d27c90d423f5c9a5d6a6d705ce94beed7b",
+  "seed": 2026,
+  "split_sha256": "13902d5c8a7f8b83856959923ff73f0b283087c3d785fb48e38890efa1f2617b",
+  "mmseqs_version": "2a3dafc46f9a1bc79af96b4c11a24d63a7b0b4d4",
+  "identity": "nident/alnlen >= 0.40 (including gaps in alignment denominator)",
+  "coverage": "(abs(end-start)+1)/length >= 0.80 on the longer protein; equal lengths require both",
+  "grouping": "connected components of observed homology edges + exact duplicates + WT/MUT pair + optional protein_group",
+  "search_note": "MMseqs2 exhaustive all-vs-all search; edges reflect the alignments found, not a proof that all possible local alignments were enumerated",
+  "outer": "first fold of seeded StratifiedGroupKFold(5); approximately 80/20 by rows",
+  "inner": "seeded StratifiedGroupKFold(5) within development only",
+  "summary": {
+    "development": {
+      "samples": 3233,
+      "positive": 1229,
+      "negative": 2004,
+      "clusters": 920
+    },
+    "test": {
+      "samples": 762,
+      "positive": 286,
+      "negative": 476,
+      "clusters": 242
+    },
+    "test_fraction": 0.190738423028786,
+    "total_clusters": 1162,
+    "homology_edges_crossing_partitions": 0
+  }
+}
